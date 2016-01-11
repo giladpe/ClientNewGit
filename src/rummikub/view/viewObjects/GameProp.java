@@ -10,8 +10,18 @@ package rummikub.view.viewObjects;
  * @author giladPe
  */
 public class GameProp {
-
+    int numOfPlayers;
+    int numOfComputerPlayers;
+    String gameStatus;
     private String gameName;
+
+    public String getGameStatus() {
+        return gameStatus;
+    }
+
+    public void setGameStatus(String gameStatus) {
+        this.gameStatus = gameStatus;
+    }
 
     public String getGameName() {
         return gameName;
@@ -36,17 +46,18 @@ public class GameProp {
     public void setNumOfComputerPlayers(int numOfComputerPlayers) {
         this.numOfComputerPlayers = numOfComputerPlayers;
     }
-    int numOfPlayers;
-    int numOfComputerPlayers;
+
 
     public GameProp() {
         this.gameName = "";
         this.numOfPlayers = 2;
         this.numOfComputerPlayers = 0;
+        this.gameStatus="waiting";
     }
     public GameProp(String gameName,int numOfPlayers,int numOfComputerPlayers) {
         this.gameName = gameName;
         this.numOfPlayers = numOfPlayers;
         this.numOfComputerPlayers = numOfComputerPlayers;
+        this.gameStatus="waiting";
     }
 }
