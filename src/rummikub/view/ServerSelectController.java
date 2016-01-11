@@ -45,6 +45,8 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private static final String NO_HUMAN_MSG = "Chose atleast one human player!";
     private static final String EMPTY_STRING="";
     private static final String CONTAINS_WHITE_SPACES_MSG="Name can not statr with whitespaces!";
+    private static final String INVALID_NUMBER="Invalid number!";
+    
     
     
     
@@ -79,6 +81,7 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private TableColumn<?, ?> gameStatus;
     
     
+    
     @FXML
     private void handleBackToMenuButtonAction(ActionEvent event) {
     }
@@ -107,11 +110,11 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
                 initAddButton();
         });
         this.numOfPlayersInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
-                isValidNumOfPlayers();
+                isNumericChar(this.numOfPlayersInput);
                 initAddButton();
         });
         this.numOfCopmputersInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
-                isValidNumOfComputerPlayers(this.numOfCopmputersInput.getText());
+                isNumericChar(this.numOfCopmputersInput);
                 initAddButton();
         });
     }
@@ -149,9 +152,13 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
 
     }
 
-    private void isValidNumOfPlayers() {
-        //TODO
+    private void isNumericChar(TextField text) {
+        if (!text.getText().isEmpty()&&!text.getText().matches("\\d*")) {
+            text.clear();
+            showErrorMsg(errorMsg, INVALID_NUMBER);
+        }
     }
+    
 
     private void isValidNumOfComputerPlayers(String text) {
         //TODO
@@ -215,3 +222,29 @@ public static void showErrorMsg(Label label,String msg){
 
     
 }
+//public class NumberTextField extends TextField
+//{
+//
+//    @Override
+//    public void replaceText(int start, int end, String text)
+//    {
+//        if (validate(text))
+//        {
+//            super.replaceText(start, end, text);
+//        }
+//    }
+//
+//    @Override
+//    public void replaceSelection(String text)
+//    {
+//        if (validate(text))
+//        {
+//            super.replaceSelection(text);
+//        }
+//    }
+//
+//    private boolean validate(String text)
+//    {
+//        return text.matches("[0-9]*");
+//    }
+//}
