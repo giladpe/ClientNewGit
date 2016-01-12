@@ -33,7 +33,9 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
-import rummikub.view.viewObjects.GameProp;
+import rummikub.client.ws.GameDetails;
+import rummikub.client.ws.RummikubWebServiceService;
+//import rummikub.view.viewObjects.GameProp;
 
 /**
  * FXML Controller class
@@ -48,9 +50,17 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private static final String INVALID_NUMBER="Invalid number!";
     private static final String INVALID_COMPUTERS_NUMBER="invalid Computer players number";
     private static final String INVALID_PLAYERS_NUMBER="invalid players number";
+    private static final String INVALID_HUMANS_NUMBER="invalid Human players number";
     
-    
-    
+    private RummikubWebServiceService service;
+
+    public RummikubWebServiceService getService() {
+        return service;
+    }
+
+    public void setService(RummikubWebServiceService service) {
+        this.service = service;
+    }
     
     @FXML
     private GridPane GamesSettings;
@@ -59,19 +69,19 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     @FXML
     private Label errorMsg;
     @FXML
-    private TableView<GameProp> gamesTableView;
+    private TableView<GameDetails> gamesTableView;
     @FXML
-    private TableColumn<GameProp,String> gameNameColumn;
+    private TableColumn<GameDetails,String> gameNameColumn;
     
     @FXML 
-    private TableColumn<GameProp, Integer> computerPlayersColumn;
+    private TableColumn<GameDetails, Integer> computerPlayersColumn;
     @FXML
     TextField gameNameInput;
      
     @FXML
-    TextField numOfPlayersInput, numOfCopmputersInput;
+    TextField numOfHumansInput, numOfCopmputersInput;
     @FXML
-    private TableColumn<GameProp, Integer> numOfPlayersColumn;
+    private TableColumn<GameDetails, Integer> numOfHumanColumn;
     private ScreensController myController;
     @FXML
     private VBox tableVBox;
@@ -81,6 +91,11 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private Button addButton;
     @FXML
     private TableColumn<?, ?> gameStatus;
+    @FXML
+    private TextField playerNameInput;
+    @FXML
+    private TableColumn<?, ?> joinedColumn;
+    
     
     
     
@@ -94,48 +109,58 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        
-        this.gameNameColumn.setCellValueFactory(new PropertyValueFactory<>("gameName"));
-        this.numOfPlayersColumn.setCellValueFactory(new PropertyValueFactory<>("numOfPlayers"));
-        this.computerPlayersColumn.setCellValueFactory(new PropertyValueFactory<>("numOfComputerPlayers"));
-        this.gameStatus.setCellValueFactory(new PropertyValueFactory<>("gameStatus"));
+    //    sasa
+    //"joinedHumanPlayers",
+    //"loadedFromXML",
+          
+        this.joinedColumn.setCellValueFactory(new PropertyValueFactory<>("joinedHumanPlayers"));
+        this.gameNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        this.numOfHumanColumn.setCellValueFactory(new PropertyValueFactory<>("humanPlayers"));
+        this.computerPlayersColumn.setCellValueFactory(new PropertyValueFactory<>("computerizedPlayers"));
+        this.gameStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
         this.joinButton.setDisable(true);
         
         this.addButton.setOnAction(e -> addButtonClicked());   
         this.joinButton.setOnAction(e -> joinButtonClicked());
         initAddButton();
         //this.gamesTableView.selectionModelProperty().addListener(new PropertyDescriptor.Listener<>);
-              gamesTableView.getSelectionModel().getSelectedItems().addListener((Change<? extends GameProp> change) -> joinButton.setDisable(false));
-        
+        gamesTableView.getSelectionModel().getSelectedItems().addListener((Change<? extends GameDetails> change) -> joinButton.setDisable(this.playerNameInput.getText().isEmpty()));
+        ///add listener to game name 
         this.gameNameInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
                 isValidGameName();
                 initAddButton();
         });
-        this.numOfPlayersInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
-                isNumericChar(this.numOfPlayersInput);
+        this.numOfHumansInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
+                isNumericChar(this.numOfHumansInput);
                 initAddButton();
         });
         this.numOfCopmputersInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
                 isNumericChar(this.numOfCopmputersInput);
                 initAddButton();
         });
+        this.playerNameInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
+                initAddButton();
+                initJoinButton();
+                });
+
     }
     @FXML
     public void addButtonClicked(){
-        GameProp gameProp = new GameProp();
-        gameProp.setGameName(this.gameNameInput.getText());
-        gameProp.setNumOfPlayers(getNumOfPlayers());
-        gameProp.setNumOfComputerPlayers(getNumOfComputerPlayers());
-        this.gamesTableView.getItems().add(gameProp);
+        GameDetails gameDetails = new GameDetails();
+        gameDetails.setName(this.gameNameInput.getText());
+        gameDetails.setHumanPlayers(getNumOfHumansPlayers()-getNumOfComputerPlayers());
+        gameDetails.setComputerizedPlayers(getNumOfComputerPlayers());
+        this.gamesTableView.getItems().add(gameDetails);
         this.gameNameInput.clear();
-        this.numOfPlayersInput.clear();
+        this.numOfHumansInput.clear();
         this.numOfCopmputersInput.clear();
+     //   this.service.crea
         ///Need TOADD SERVER FUNC and transfer to waiting room
     }
-    public int getNumOfPlayers(){
+    public int getNumOfHumansPlayers(){
         int num=0;
-        if(!this.numOfPlayersInput.getText().isEmpty()){
-            num=Integer.parseInt(this.numOfPlayersInput.getText());
+        if(!this.numOfHumansInput.getText().isEmpty()){
+            num=Integer.parseInt(this.numOfHumansInput.getText());
         }
         return num;
     }
@@ -239,22 +264,29 @@ public static void showErrorMsg(Label label,String msg){
 
     private boolean isAllSet() {
        boolean allSet=true;
-       if(this.gameNameInput.getText().isEmpty()||this.numOfCopmputersInput.getText().isEmpty()||this.numOfPlayersInput.getText().isEmpty()){
+       if(this.playerNameInput.getText().isEmpty()||this.gameNameInput.getText().isEmpty()||this.numOfCopmputersInput.getText().isEmpty()||this.numOfHumansInput.getText().isEmpty()){
            allSet=false;
        }
-       if(getNumOfPlayers()>4||getNumOfPlayers()<2){
-           if(!this.numOfPlayersInput.getText().isEmpty()){
-               showErrorMsg(errorMsg, INVALID_PLAYERS_NUMBER);
+       if(getNumOfHumansPlayers()>4||getNumOfHumansPlayers()<1){
+           if(!this.numOfHumansInput.getText().isEmpty()){
+               showErrorMsg(errorMsg, INVALID_HUMANS_NUMBER);
            }
            allSet=false;
-       }else if(getNumOfComputerPlayers()>getNumOfPlayers()-1){
+       }else if(getNumOfComputerPlayers()>3){
            showErrorMsg(errorMsg, INVALID_COMPUTERS_NUMBER);
+           allSet=false;
+       }
+       else if(getNumOfComputerPlayers()+getNumOfHumansPlayers()>4||getNumOfComputerPlayers()+getNumOfHumansPlayers()<2){
+           showErrorMsg(errorMsg, INVALID_PLAYERS_NUMBER);
            allSet=false;
        }
        
        return allSet;
     }
 
+    private void initJoinButton() {
+            this.joinButton.setDisable((this.playerNameInput.getText().isEmpty()||!this.gamesTableView.getSelectionModel().isSelected(0)));
+    }
     
 }
 //public class NumberTextField extends TextField
