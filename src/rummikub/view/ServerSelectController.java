@@ -46,6 +46,8 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private static final String EMPTY_STRING="";
     private static final String CONTAINS_WHITE_SPACES_MSG="Name can not statr with whitespaces!";
     private static final String INVALID_NUMBER="Invalid number!";
+    private static final String INVALID_COMPUTERS_NUMBER="invalid Computer players number";
+    private static final String INVALID_PLAYERS_NUMBER="invalid players number";
     
     
     
@@ -122,8 +124,8 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     public void addButtonClicked(){
         GameProp gameProp = new GameProp();
         gameProp.setGameName(this.gameNameInput.getText());
-        gameProp.setNumOfComputerPlayers(getNumOfPlayers());
-        gameProp.setNumOfPlayers(getNumOfComputerPlayers());
+        gameProp.setNumOfPlayers(getNumOfPlayers());
+        gameProp.setNumOfComputerPlayers(getNumOfComputerPlayers());
         this.gamesTableView.getItems().add(gameProp);
         this.gameNameInput.clear();
         this.numOfPlayersInput.clear();
@@ -131,10 +133,18 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
         ///Need TOADD SERVER FUNC and transfer to waiting room
     }
     public int getNumOfPlayers(){
-        return Integer.parseInt(this.numOfPlayersInput.getText());
+        int num=0;
+        if(!this.numOfPlayersInput.getText().isEmpty()){
+            num=Integer.parseInt(this.numOfPlayersInput.getText());
+        }
+        return num;
     }
     public int getNumOfComputerPlayers(){
-        return Integer.parseInt(this.numOfCopmputersInput.getText());
+        int num=0;
+        if(!this.numOfCopmputersInput.getText().isEmpty()){
+            num=Integer.parseInt(this.numOfCopmputersInput.getText());
+        }
+        return num;
     }
     //Delete button clicked
     @FXML
@@ -153,11 +163,26 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     }
 
     private void isNumericChar(TextField text) {
-        if (!text.getText().isEmpty()&&!text.getText().matches("\\d*")) {
+        if (!text.getText().isEmpty()&&!Character.isDigit(text.getText().charAt(0))){//.matches("\\d*")) {
             text.clear();
             showErrorMsg(errorMsg, INVALID_NUMBER);
         }
+        else{
+        if(text.getText().length()>1){
+            char [] charArr = new char[1];
+            charArr[0]= text.getText().charAt(0);
+            String num=new String(charArr);
+            text.setText(num);
+        }
+        
+        }
     }
+//        private void isNumericChar(TextField text) {
+//        if (!text.getText().isEmpty()&&!text.getText().matches("\\d*")) {
+//            text.clear();
+//            showErrorMsg(errorMsg, INVALID_NUMBER);
+//        }
+//    }
     
 
     private void isValidNumOfComputerPlayers(String text) {
@@ -217,6 +242,16 @@ public static void showErrorMsg(Label label,String msg){
        if(this.gameNameInput.getText().isEmpty()||this.numOfCopmputersInput.getText().isEmpty()||this.numOfPlayersInput.getText().isEmpty()){
            allSet=false;
        }
+       if(getNumOfPlayers()>4||getNumOfPlayers()<2){
+           if(!this.numOfPlayersInput.getText().isEmpty()){
+               showErrorMsg(errorMsg, INVALID_PLAYERS_NUMBER);
+           }
+           allSet=false;
+       }else if(getNumOfComputerPlayers()>getNumOfPlayers()-1){
+           showErrorMsg(errorMsg, INVALID_COMPUTERS_NUMBER);
+           allSet=false;
+       }
+       
        return allSet;
     }
 
