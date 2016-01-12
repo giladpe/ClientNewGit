@@ -20,6 +20,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import rummikub.client.ws.RummikubWebService;
 import rummikub.client.ws.RummikubWebServiceService;
 import rummikubFX.Rummikub;
 
@@ -53,7 +54,7 @@ public class LogInController implements Initializable, ControlledScreen, Resetab
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        this.address.setText("127.0.0.1");
+        this.address.setText("localhost");
         this.address.setDisable(true);
         this.port.setText("8080");
         this.port.setDisable(true);
@@ -76,9 +77,10 @@ public class LogInController implements Initializable, ControlledScreen, Resetab
 
     @FXML
     private void handleLoginButtonAction(ActionEvent event) {
+     
         try {
             //create a URL
-            URL location = new URL("http://" + address + ":" + port + "/RummikubApi/RummikubWebServiceService?wsdl");
+            URL location = new URL("http://" + address.getText() + ":" + port.getText() + "/RummikubApi/RummikubWebServiceService?wsdl");
             //create a new service with the URL
             RummikubWebServiceService service = new RummikubWebServiceService(location);
 //            ServerSelectController gameSeettingsScene = (ServerSelectController) this.myController.getControllerScreen(Rummikub.GAME_PARAMETERS_SCREEN_ID);

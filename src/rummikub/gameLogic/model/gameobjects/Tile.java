@@ -7,10 +7,6 @@ import java.util.Objects;
 
 public class Tile implements Comparable<Tile> {
 
-    
-
-    
-
     public enum Color {
         BLACK("#0a0a09", 100),
         RED("#ff0022", 200),
