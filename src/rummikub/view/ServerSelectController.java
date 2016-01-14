@@ -8,7 +8,11 @@ package rummikub.view;
 import com.sun.javafx.binding.BindingHelperObserver;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -33,7 +37,13 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
-import rummikub.view.viewObjects.GameProp;
+import rummikub.client.ws.DuplicateGameName_Exception;
+import rummikub.client.ws.GameDetails;
+import rummikub.client.ws.GameDoesNotExists_Exception;
+import rummikub.client.ws.InvalidParameters_Exception;
+import rummikub.client.ws.RummikubWebService;
+import rummikub.client.ws.RummikubWebServiceService;
+//import rummikub.view.viewObjects.GameProp;
 
 /**
  * FXML Controller class
@@ -46,11 +56,24 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private static final String EMPTY_STRING="";
     private static final String CONTAINS_WHITE_SPACES_MSG="Name can not statr with whitespaces!";
     private static final String INVALID_NUMBER="Invalid number!";
-    private static final String INVALID_COMPUTERS_NUMBER="invalid Computer players number";
-    private static final String INVALID_PLAYERS_NUMBER="invalid players number";
-    
-    
-    
+    private static final String INVALID_COMPUTERS_NUMBER="Invalid computer players number";
+    private static final String INVALID_PLAYERS_NUMBER="Invalid players number";
+    private static final String INVALID_HUMANS_NUMBER="Invalid human players number";
+    private String GAME_DOES_NOT_EXISTS="Game does not exists";
+    private String INVALID_PARAMETERS="Invalid parameters input ";    
+    private String DUP_NAME="Duplicate game name insert new name";
+    private RummikubWebServiceService service;
+    private RummikubWebService rummikubWebService;
+
+
+
+    public RummikubWebServiceService getService() {
+        return service;
+    }
+
+    public void setService(RummikubWebServiceService service) {
+        this.service = service;
+    }
     
     @FXML
     private GridPane GamesSettings;
@@ -59,19 +82,19 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     @FXML
     private Label errorMsg;
     @FXML
-    private TableView<GameProp> gamesTableView;
+    private TableView<GameDetails> gamesTableView;
     @FXML
-    private TableColumn<GameProp,String> gameNameColumn;
+    private TableColumn<GameDetails,String> gameNameColumn;
     
     @FXML 
-    private TableColumn<GameProp, Integer> computerPlayersColumn;
+    private TableColumn<GameDetails, Integer> computerPlayersColumn;
     @FXML
     TextField gameNameInput;
      
     @FXML
-    TextField numOfPlayersInput, numOfCopmputersInput;
+    TextField numOfHumansInput, numOfCopmputersInput;
     @FXML
-    private TableColumn<GameProp, Integer> numOfPlayersColumn;
+    private TableColumn<GameDetails, Integer> numOfHumanColumn;
     private ScreensController myController;
     @FXML
     private VBox tableVBox;
@@ -81,6 +104,11 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private Button addButton;
     @FXML
     private TableColumn<?, ?> gameStatus;
+    @FXML
+    private TextField playerNameInput;
+    @FXML
+    private TableColumn<?, ?> joinedColumn;
+    
     
     
     
@@ -94,48 +122,82 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        
-        this.gameNameColumn.setCellValueFactory(new PropertyValueFactory<>("gameName"));
-        this.numOfPlayersColumn.setCellValueFactory(new PropertyValueFactory<>("numOfPlayers"));
-        this.computerPlayersColumn.setCellValueFactory(new PropertyValueFactory<>("numOfComputerPlayers"));
-        this.gameStatus.setCellValueFactory(new PropertyValueFactory<>("gameStatus"));
+    //    sasa
+    //"joinedHumanPlayers",
+    //"loadedFromXML",
+          
+        this.joinedColumn.setCellValueFactory(new PropertyValueFactory<>("joinedHumanPlayers"));
+        this.gameNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        this.numOfHumanColumn.setCellValueFactory(new PropertyValueFactory<>("humanPlayers"));
+        this.computerPlayersColumn.setCellValueFactory(new PropertyValueFactory<>("computerizedPlayers"));
+        this.gameStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
         this.joinButton.setDisable(true);
         
         this.addButton.setOnAction(e -> addButtonClicked());   
         this.joinButton.setOnAction(e -> joinButtonClicked());
         initAddButton();
         //this.gamesTableView.selectionModelProperty().addListener(new PropertyDescriptor.Listener<>);
-              gamesTableView.getSelectionModel().getSelectedItems().addListener((Change<? extends GameProp> change) -> joinButton.setDisable(false));
-        
+        gamesTableView.getSelectionModel().getSelectedItems().addListener((Change<? extends GameDetails> change) -> joinButton.setDisable(this.playerNameInput.getText().isEmpty()));
+        ///add listener to game name 
         this.gameNameInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
                 isValidGameName();
                 initAddButton();
         });
-        this.numOfPlayersInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
-                isNumericChar(this.numOfPlayersInput);
+        this.numOfHumansInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
+                isNumericChar(this.numOfHumansInput);
                 initAddButton();
         });
         this.numOfCopmputersInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
                 isNumericChar(this.numOfCopmputersInput);
                 initAddButton();
         });
+        this.playerNameInput.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
+                initAddButton();
+                initJoinButton();
+                });
+
     }
     @FXML
     public void addButtonClicked(){
-        GameProp gameProp = new GameProp();
-        gameProp.setGameName(this.gameNameInput.getText());
-        gameProp.setNumOfPlayers(getNumOfPlayers());
-        gameProp.setNumOfComputerPlayers(getNumOfComputerPlayers());
-        this.gamesTableView.getItems().add(gameProp);
+        GameDetails gameDetails = new GameDetails();
+        gameDetails.setName(this.gameNameInput.getText());
+        gameDetails.setHumanPlayers(getNumOfHumansPlayers());
+        gameDetails.setComputerizedPlayers(getNumOfComputerPlayers());
+        this.gamesTableView.getItems().add(gameDetails);
+
+        RummikubWebService rummikubWebService=service.getRummikubWebServicePort();
+        try {
+            rummikubWebService.createGame(this.gameNameInput.getText(), getNumOfHumansPlayers(), getNumOfComputerPlayers());
+        } catch (DuplicateGameName_Exception ex) {
+            showErrorMsg(errorMsg,DUP_NAME);
+        } catch (InvalidParameters_Exception ex) {
+            showErrorMsg(errorMsg,INVALID_PARAMETERS);
+        }
         this.gameNameInput.clear();
-        this.numOfPlayersInput.clear();
+        this.numOfHumansInput.clear();
         this.numOfCopmputersInput.clear();
-        ///Need TOADD SERVER FUNC and transfer to waiting room
     }
-    public int getNumOfPlayers(){
+    ObservableList<GameDetails> getListOfWaittingGames(){
+        RummikubWebService rummikubWebService=service.getRummikubWebServicePort();
+        List<String> stringGames=rummikubWebService.getWaitingGames();
+        ObservableList<GameDetails> gamesDetails=FXCollections.observableArrayList();
+        for (String stringGame : stringGames) {
+            try {
+                gamesDetails.add(rummikubWebService.getGameDetails(stringGame));
+            } catch (GameDoesNotExists_Exception ex) {
+                //Logger.getLogger(ServerSelectController.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println("No Game");
+            }
+        }
+        return gamesDetails;
+    }
+    
+    
+    
+    public int getNumOfHumansPlayers(){
         int num=0;
-        if(!this.numOfPlayersInput.getText().isEmpty()){
-            num=Integer.parseInt(this.numOfPlayersInput.getText());
+        if(!this.numOfHumansInput.getText().isEmpty()){
+            num=Integer.parseInt(this.numOfHumansInput.getText());
         }
         return num;
     }
@@ -149,7 +211,17 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     //Delete button clicked
     @FXML
     public void joinButtonClicked(){
-           //////TODO 
+        RummikubWebService rummikubWebService=service.getRummikubWebServicePort();
+        try {
+            rummikubWebService.joinGame(this.gamesTableView.getSelectionModel().getSelectedItem().getName(), this.playerNameInput.getText());
+             this.playerNameInput.clear();
+            //////TODO 
+        } catch (GameDoesNotExists_Exception ex) {
+            showErrorMsg(errorMsg,GAME_DOES_NOT_EXISTS);
+        } catch (InvalidParameters_Exception ex) {
+            showErrorMsg(errorMsg,INVALID_PARAMETERS);
+        }
+        this.gamesTableView.getSelectionModel().clearSelection();
     }
 
     @Override
@@ -159,7 +231,8 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
 
     @Override
     public void resetScreen() {
-
+        this.gamesTableView.getItems().clear();
+        this.gamesTableView.setItems(getListOfWaittingGames());
     }
 
     private void isNumericChar(TextField text) {
@@ -239,22 +312,29 @@ public static void showErrorMsg(Label label,String msg){
 
     private boolean isAllSet() {
        boolean allSet=true;
-       if(this.gameNameInput.getText().isEmpty()||this.numOfCopmputersInput.getText().isEmpty()||this.numOfPlayersInput.getText().isEmpty()){
+       if(this.playerNameInput.getText().isEmpty()||this.gameNameInput.getText().isEmpty()||this.numOfCopmputersInput.getText().isEmpty()||this.numOfHumansInput.getText().isEmpty()){
            allSet=false;
        }
-       if(getNumOfPlayers()>4||getNumOfPlayers()<2){
-           if(!this.numOfPlayersInput.getText().isEmpty()){
-               showErrorMsg(errorMsg, INVALID_PLAYERS_NUMBER);
+       if(getNumOfHumansPlayers()>4||getNumOfHumansPlayers()<1){
+           if(!this.numOfHumansInput.getText().isEmpty()){
+               showErrorMsg(errorMsg, INVALID_HUMANS_NUMBER);
            }
            allSet=false;
-       }else if(getNumOfComputerPlayers()>getNumOfPlayers()-1){
+       }else if(getNumOfComputerPlayers()>3){
            showErrorMsg(errorMsg, INVALID_COMPUTERS_NUMBER);
+           allSet=false;
+       }
+       else if(getNumOfComputerPlayers()+getNumOfHumansPlayers()>4||getNumOfComputerPlayers()+getNumOfHumansPlayers()<2){
+           showErrorMsg(errorMsg, INVALID_PLAYERS_NUMBER);
            allSet=false;
        }
        
        return allSet;
     }
 
+    private void initJoinButton() {
+            this.joinButton.setDisable((this.playerNameInput.getText().isEmpty()||!this.gamesTableView.getSelectionModel().isSelected(0)));
+    }
     
 }
 //public class NumberTextField extends TextField

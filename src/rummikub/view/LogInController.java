@@ -80,16 +80,19 @@ public class LogInController implements Initializable, ControlledScreen, Resetab
             //create a URL
             URL location = new URL("http://" + address.getText() + ":" + port.getText() + "/RummikubApi/RummikubWebServiceService?wsdl");
             //create a new service with the URL
+            ServerSelectController gameSeettingsScene = (ServerSelectController) this.myController.getControllerScreen(Rummikub.SERVER_SELECT_SCREEN_ID);
+            this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID, gameSeettingsScene);
             RummikubWebServiceService service = new RummikubWebServiceService(location);
-//            ServerSelectController gameSeettingsScene = (ServerSelectController) this.myController.getControllerScreen(Rummikub.GAME_PARAMETERS_SCREEN_ID);
-//            this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID, gameSeettingsScene);
-//            resetScreen();
+            gameSeettingsScene.setService(service);
+            this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID,gameSeettingsScene);
+            
+            resetScreen();
         } catch (MalformedURLException ex) {
             this.errorMsg.setText("Invalid Url");/////to change
         }
-        ServerSelectController gameSeettingsScene = (ServerSelectController) this.myController.getControllerScreen(Rummikub.SERVER_SELECT_SCREEN_ID);
-            this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID, gameSeettingsScene);
-            resetScreen();
+        //ServerSelectController gameSeettingsScene = (ServerSelectController) this.myController.getControllerScreen(Rummikub.SERVER_SELECT_SCREEN_ID);
+        //    this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID, gameSeettingsScene);
+        //    resetScreen();
 
     }
 
