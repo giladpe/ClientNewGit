@@ -86,7 +86,8 @@ public class LogInController implements Initializable, ControlledScreen, Resetab
             this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID, gameSeettingsScene);
             RummikubWebServiceService service = new RummikubWebServiceService(location);
             gameSeettingsScene.setService(service);
-            this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID, gameSeettingsScene);
+            this.myController.setScreen(Rummikub.SERVER_SELECT_SCREEN_ID,gameSeettingsScene);
+            
             resetScreen();
         } catch (MalformedURLException ex) {
             this.errorMsg.setText("Invalid Url");/////to change

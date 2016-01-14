@@ -8,7 +8,11 @@ package rummikub.view;
 import com.sun.javafx.binding.BindingHelperObserver;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -33,7 +37,11 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import rummikub.client.ws.DuplicateGameName_Exception;
 import rummikub.client.ws.GameDetails;
+import rummikub.client.ws.GameDoesNotExists_Exception;
+import rummikub.client.ws.InvalidParameters_Exception;
+import rummikub.client.ws.RummikubWebService;
 import rummikub.client.ws.RummikubWebServiceService;
 //import rummikub.view.viewObjects.GameProp;
 
@@ -48,11 +56,16 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     private static final String EMPTY_STRING="";
     private static final String CONTAINS_WHITE_SPACES_MSG="Name can not statr with whitespaces!";
     private static final String INVALID_NUMBER="Invalid number!";
-    private static final String INVALID_COMPUTERS_NUMBER="invalid Computer players number";
-    private static final String INVALID_PLAYERS_NUMBER="invalid players number";
-    private static final String INVALID_HUMANS_NUMBER="invalid Human players number";
-    
+    private static final String INVALID_COMPUTERS_NUMBER="Invalid computer players number";
+    private static final String INVALID_PLAYERS_NUMBER="Invalid players number";
+    private static final String INVALID_HUMANS_NUMBER="Invalid human players number";
+    private String GAME_DOES_NOT_EXISTS="Game does not exists";
+    private String INVALID_PARAMETERS="Invalid parameters input ";    
+    private String DUP_NAME="Duplicate game name insert new name";
     private RummikubWebServiceService service;
+    private RummikubWebService rummikubWebService;
+
+
 
     public RummikubWebServiceService getService() {
         return service;
@@ -148,15 +161,39 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     public void addButtonClicked(){
         GameDetails gameDetails = new GameDetails();
         gameDetails.setName(this.gameNameInput.getText());
-        gameDetails.setHumanPlayers(getNumOfHumansPlayers()-getNumOfComputerPlayers());
+        gameDetails.setHumanPlayers(getNumOfHumansPlayers());
         gameDetails.setComputerizedPlayers(getNumOfComputerPlayers());
         this.gamesTableView.getItems().add(gameDetails);
+
+        RummikubWebService rummikubWebService=service.getRummikubWebServicePort();
+        try {
+            rummikubWebService.createGame(this.gameNameInput.getText(), getNumOfHumansPlayers(), getNumOfComputerPlayers());
+        } catch (DuplicateGameName_Exception ex) {
+            showErrorMsg(errorMsg,DUP_NAME);
+        } catch (InvalidParameters_Exception ex) {
+            showErrorMsg(errorMsg,INVALID_PARAMETERS);
+        }
         this.gameNameInput.clear();
         this.numOfHumansInput.clear();
         this.numOfCopmputersInput.clear();
-     //   this.service.crea
-        ///Need TOADD SERVER FUNC and transfer to waiting room
     }
+    ObservableList<GameDetails> getListOfWaittingGames(){
+        RummikubWebService rummikubWebService=service.getRummikubWebServicePort();
+        List<String> stringGames=rummikubWebService.getWaitingGames();
+        ObservableList<GameDetails> gamesDetails=FXCollections.observableArrayList();
+        for (String stringGame : stringGames) {
+            try {
+                gamesDetails.add(rummikubWebService.getGameDetails(stringGame));
+            } catch (GameDoesNotExists_Exception ex) {
+                //Logger.getLogger(ServerSelectController.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println("No Game");
+            }
+        }
+        return gamesDetails;
+    }
+    
+    
+    
     public int getNumOfHumansPlayers(){
         int num=0;
         if(!this.numOfHumansInput.getText().isEmpty()){
@@ -174,7 +211,17 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
     //Delete button clicked
     @FXML
     public void joinButtonClicked(){
-           //////TODO 
+        RummikubWebService rummikubWebService=service.getRummikubWebServicePort();
+        try {
+            rummikubWebService.joinGame(this.gamesTableView.getSelectionModel().getSelectedItem().getName(), this.playerNameInput.getText());
+             this.playerNameInput.clear();
+            //////TODO 
+        } catch (GameDoesNotExists_Exception ex) {
+            showErrorMsg(errorMsg,GAME_DOES_NOT_EXISTS);
+        } catch (InvalidParameters_Exception ex) {
+            showErrorMsg(errorMsg,INVALID_PARAMETERS);
+        }
+        this.gamesTableView.getSelectionModel().clearSelection();
     }
 
     @Override
@@ -184,7 +231,8 @@ public class ServerSelectController implements Initializable, ControlledScreen, 
 
     @Override
     public void resetScreen() {
-
+        this.gamesTableView.getItems().clear();
+        this.gamesTableView.setItems(getListOfWaittingGames());
     }
 
     private void isNumericChar(TextField text) {
