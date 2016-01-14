@@ -61,6 +61,10 @@ public class MainMenuController implements Initializable, ControlledScreen, Rese
         Platform.runLater(() -> { enableOrDisableButtonsControls(!ENABLED); });
         File file = fileChooser.showOpenDialog(((Button) event.getSource()).getContextMenu());
 
+        //artur edit: (test to convert file to string)
+        StringBuilder builder = new StringBuilder();
+        
+        
         if (file != null) {
             try {
                 new Thread(() -> { loadGame(file); }).start();

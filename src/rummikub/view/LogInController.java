@@ -49,12 +49,10 @@ public class LogInController implements Initializable, ControlledScreen, Resetab
     @FXML
     private CheckBox changeServerCheckBox;
 
-    /**
-     * Initializes the controller class.
-     */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         this.address.setText("localhost");
+        //this.address.setText("127.0.0.1");  //both lines work
         this.address.setDisable(true);
         this.port.setText("8080");
         this.port.setDisable(true);
